@@ -21,5 +21,8 @@
     <genClasses ecoreClass="model2.ecore#//CommunicationStandard">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute model2.ecore#//CommunicationStandard/name"/>
     </genClasses>
+    <genClasses image="false" ecoreClass="model2.ecore#//Identifiable">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute model2.ecore#//Identifiable/id"/>
+    </genClasses>
   </genPackages>
 </genmodel:GenModel>

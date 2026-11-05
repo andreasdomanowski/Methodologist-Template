@@ -148,17 +148,17 @@ The test case which also can be found in the `VSUMExampleTest.java` file, looks 
 
       var system = v.getRootObjects(System.class).iterator().next();
 
-      var component1 = ModelFactory.eINSTANCE.createComponent();
+      var component1 = withId(ModelFactory.eINSTANCE.createComponent());
       component1.setName("component1");
-      var component2 = ModelFactory.eINSTANCE.createComponent();
+      var component2 = withId(ModelFactory.eINSTANCE.createComponent());
       component2.setName("component2");
       system.getComponents().addAll(List.of(component1, component2));
 
-      var protocol = ModelFactory.eINSTANCE.createProtocol();
+      var protocol = withId(ModelFactory.eINSTANCE.createProtocol());
       protocol.setName("exampleProtocol");
       system.getProtocols().add(protocol);
 
-      var link = ModelFactory.eINSTANCE.createLink();
+      var link = withId(ModelFactory.eINSTANCE.createLink());
       system.getLinks().add(link);
       link.setProtocol(protocol);
       link.getComponents().addAll(List.of(component1, component2));

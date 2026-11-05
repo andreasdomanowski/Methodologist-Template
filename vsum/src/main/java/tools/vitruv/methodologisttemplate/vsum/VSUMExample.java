@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 import mir.reactions.model2Model2.Model2Model2ChangePropagationSpecification;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import tools.vitruv.change.atomic.uuid.Uuid;
 import tools.vitruv.change.composite.description.PropagatedChange;
@@ -18,6 +19,7 @@ import tools.vitruv.framework.views.View;
 import tools.vitruv.framework.views.ViewTypeFactory;
 import tools.vitruv.framework.vsum.VirtualModel;
 import tools.vitruv.framework.vsum.VirtualModelBuilder;
+import tools.vitruv.methodologisttemplate.model.model.Identifiable;
 import tools.vitruv.methodologisttemplate.model.model.ModelFactory;
 
 /**
@@ -97,9 +99,15 @@ public class VSUMExample {
           // System is a brand-new root: Vitruvius needs an explicit URI to know which resource
           // to persist it into.
           v.registerRoot(
-              ModelFactory.eINSTANCE.createSystem(),
+              withId(ModelFactory.eINSTANCE.createSystem()),
               URI.createFileURI(STORAGE_FOLDER.resolve("example.model").toString()));
         });
+  }
+
+  /** Assigns a fresh unique id, so elements can be matched robustly when comparing models. */
+  private static <T extends Identifiable> T withId(T element) {
+    element.setId(EcoreUtil.generateUUID());
+    return element;
   }
 
   private static VirtualModel createDefaultVirtualModel() throws IOException {

@@ -9,6 +9,7 @@ import java.util.function.Function;
 import mir.reactions.model2Model2.Model2Model2ChangePropagationSpecification;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,6 +24,7 @@ import tools.vitruv.framework.views.ViewTypeFactory;
 import tools.vitruv.framework.vsum.VirtualModel;
 import tools.vitruv.framework.vsum.VirtualModelBuilder;
 import tools.vitruv.framework.vsum.internal.InternalVirtualModel;
+import tools.vitruv.methodologisttemplate.model.model.Identifiable;
 import tools.vitruv.methodologisttemplate.model.model.ModelFactory;
 import tools.vitruv.methodologisttemplate.model.model.System;
 import tools.vitruv.methodologisttemplate.model.model2.Root;
@@ -124,7 +126,7 @@ public class VSUMExampleTest {
               .iterator()
               .next()
               .getComponents()
-              .add(ModelFactory.eINSTANCE.createRouter());
+              .add(withId(ModelFactory.eINSTANCE.createRouter()));
         });
     Assertions.assertTrue(
         assertView(
@@ -215,17 +217,17 @@ public class VSUMExampleTest {
         (CommittableView v) -> {
           var system = v.getRootObjects(System.class).iterator().next();
 
-          var component1 = ModelFactory.eINSTANCE.createComponent();
+          var component1 = withId(ModelFactory.eINSTANCE.createComponent());
           component1.setName("component1");
-          var component2 = ModelFactory.eINSTANCE.createComponent();
+          var component2 = withId(ModelFactory.eINSTANCE.createComponent());
           component2.setName("component2");
           system.getComponents().addAll(List.of(component1, component2));
 
-          var protocol = ModelFactory.eINSTANCE.createProtocol();
+          var protocol = withId(ModelFactory.eINSTANCE.createProtocol());
           protocol.setName("exampleProtocol");
           system.getProtocols().add(protocol);
 
-          var link = ModelFactory.eINSTANCE.createLink();
+          var link = withId(ModelFactory.eINSTANCE.createLink());
           system.getLinks().add(link);
           link.setProtocol(protocol);
           link.getComponents().addAll(List.of(component1, component2));
@@ -281,7 +283,7 @@ public class VSUMExampleTest {
         view,
         (CommittableView v) -> {
           v.registerRoot(
-              ModelFactory.eINSTANCE.createSystem(),
+              withId(ModelFactory.eINSTANCE.createSystem()),
               URI.createFileURI(projectPath.toString() + "/example.model"));
         });
   }
@@ -291,7 +293,7 @@ public class VSUMExampleTest {
     modifyView(
         view,
         (CommittableView v) -> {
-          var component = ModelFactory.eINSTANCE.createComponent();
+          var component = withId(ModelFactory.eINSTANCE.createComponent());
           component.setName("specialname");
           v.getRootObjects(System.class).iterator().next().getComponents().add(component);
         });
@@ -302,10 +304,16 @@ public class VSUMExampleTest {
     modifyView(
         view,
         (CommittableView v) -> {
-          var component = ModelFactory.eINSTANCE.createRouter();
+          var component = withId(ModelFactory.eINSTANCE.createRouter());
           component.setName("specialRouterName");
           v.getRootObjects(System.class).iterator().next().getComponents().add(component);
         });
+  }
+
+  /** Assigns a fresh unique id, so elements can be matched robustly when comparing models. */
+  private static <T extends Identifiable> T withId(T element) {
+    element.setId(EcoreUtil.generateUUID());
+    return element;
   }
 
   private InternalVirtualModel createDefaultVirtualModel(Path projectPath) throws IOException {
