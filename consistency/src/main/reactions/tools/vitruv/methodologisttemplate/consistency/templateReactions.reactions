@@ -150,6 +150,21 @@ routine updateLinkEntities(model::Link link, model::Component component) {
 	}
 }
 
+reaction ComponentRemovedFromLink {
+	after element model::Component removed from model::Link[components]
+	call removeEntityFromLink(affectedEObject, oldValue)
+}
+
+routine removeEntityFromLink(model::Link link, model::Component component) {
+	match {
+		val mEntity = retrieve model2::Entity corresponding to component
+		val mLink = retrieve model2::Link corresponding to link
+	}
+	update {
+		mLink.entities.remove(mEntity)
+	}
+}
+
 reaction ProtocolInsertedIntoLink {
 	after element model::Protocol replaced at model::Link[protocol]
 	call updateLinkProtocols(affectedEObject, newValue)
