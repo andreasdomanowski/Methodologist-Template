@@ -95,26 +95,6 @@ routine deleteEntity(model::Component component) {
 	}
 }
 
-reaction ProtocolInsertedIntoSystem {
-    after element model::Protocol inserted in model::System[protocols]
-    call createAndInsertProtocol(affectedEObject, newValue)
-}
-
-routine createAndInsertProtocol(model::System system, model::Protocol protocol) {
-    match {
-        require absence of model2::CommunicationStandard corresponding to protocol
-        val mRoot = retrieve model2::Root corresponding to system
-    }
-    create {
-        val mStandard = new model2::CommunicationStandard
-    }
-    update {
-    	mStandard.id = EcoreUtil.generateUUID()
-    	mStandard.name = protocol.name
-    	addCorrespondenceBetween(protocol, mStandard)
-    }
-}
-
 reaction LinkInsertedIntoSystem {
 	after element model::Link inserted in model::System[links]
 	call createAndInsertLink(affectedEObject, newValue)
@@ -132,6 +112,12 @@ routine createAndInsertLink(model::System system, model::Link link) {
 		mLink.id = EcoreUtil.generateUUID()
 		mRoot.links.add(mLink)
 		addCorrespondenceBetween(link, mLink)
+		// depending on how the change was recorded, a Link may already reference its Protocol when it is inserted,
+		// so no separate ProtocolInsertedIntoLink follows; the routine's require-absence guard makes the call a
+		// no-op when one does
+		if (link.protocol !== null) {
+			createStandardForLink(link, link.protocol)
+		}
 	}
 }
 
@@ -165,17 +151,126 @@ routine removeEntityFromLink(model::Link link, model::Component component) {
 	}
 }
 
+// A CommunicationStandard can only live inside a model2 Link, as Link[standard] is its sole containment in
+// model2. A Protocol on its own therefore has no counterpart there: its standard is created together with the Link
+// referencing it and ceases to exist with that Link. Each standard corresponds to that Link, tagged "standard" so
+// it can be told apart from the Link's own counterpart, and untagged to the Protocol it stands for - one Protocol
+// may have several standards, one per Link referencing it.
 reaction ProtocolInsertedIntoLink {
 	after element model::Protocol replaced at model::Link[protocol]
-	call updateLinkProtocols(affectedEObject, newValue)
+	call updateLinkProtocol(affectedEObject, oldValue, newValue)
 }
 
-routine updateLinkProtocols(model::Link link, model::Protocol protocol) {
+routine updateLinkProtocol(model::Link link, model::Protocol oldProtocol, model::Protocol newProtocol) {
 	match {
-		val mStandard = retrieve model2::CommunicationStandard corresponding to protocol
+		val mStandard = retrieve optional model2::CommunicationStandard corresponding to link tagged "standard"
+	}
+	update {
+		if (mStandard.isPresent) {
+			// rename the Link's own standard rather than moving the new Protocol's one into it, which would drop
+			// that standard out of its container while correspondences still point at it
+			val standard = mStandard.get
+			if (oldProtocol !== null) {
+				removeCorrespondenceBetween(oldProtocol, standard)
+			}
+			standard.name = newProtocol.name
+			addCorrespondenceBetween(newProtocol, standard)
+		} else {
+			createStandardForLink(link, newProtocol)
+		}
+	}
+}
+
+routine createStandardForLink(model::Link link, model::Protocol protocol) {
+	match {
+		val mLink = retrieve model2::Link corresponding to link
+		require absence of model2::CommunicationStandard corresponding to link tagged "standard"
+	}
+	create {
+		val mStandard = new model2::CommunicationStandard
+	}
+	update {
+		mStandard.id = EcoreUtil.generateUUID()
+		mStandard.name = protocol.name
+		mLink.standard = mStandard
+		addCorrespondenceBetween(link, mStandard, "standard")
+		addCorrespondenceBetween(protocol, mStandard)
+	}
+}
+
+reaction ProtocolRenamed {
+	after attribute replaced at model::Protocol[name]
+	call renameStandards(affectedEObject)
+}
+
+routine renameStandards(model::Protocol protocol) {
+	match {
+		val mStandards = retrieve many model2::CommunicationStandard corresponding to protocol
+	}
+	update {
+		for (mStandard : mStandards) {
+			mStandard.name = protocol.name
+		}
+	}
+}
+
+reaction LinkDeleted {
+	after element model::Link deleted
+	call deleteLink(affectedEObject)
+}
+
+routine deleteLink(model::Link link) {
+	match {
 		val mLink = retrieve model2::Link corresponding to link
 	}
 	update {
-		mLink.standard = mStandard
+		detachStandardOfLink(link)
+		removeObject(mLink)
+		removeCorrespondenceBetween(mLink, link)
+	}
+}
+
+// Drops the correspondences of the standard contained in the given Link's counterpart, which stops existing along
+// with its container: a correspondence to an object that is in no resource is what makes the next change
+// propagation fail. Does nothing for a Link without a standard, whose non-optional retrieve then fails.
+routine detachStandardOfLink(model::Link link) {
+	match {
+		val mStandard = retrieve model2::CommunicationStandard corresponding to link tagged "standard"
+		val protocol = retrieve optional model::Protocol corresponding to mStandard
+	}
+	update {
+		if (protocol.isPresent) {
+			removeCorrespondenceBetween(protocol.get, mStandard)
+		}
+		removeCorrespondenceBetween(link, mStandard, "standard")
+	}
+}
+
+reaction ProtocolDeleted {
+	after element model::Protocol deleted
+	call deleteStandardsOfProtocol(affectedEObject)
+}
+
+routine deleteStandardsOfProtocol(model::Protocol protocol) {
+	match {
+		val mStandards = retrieve many model2::CommunicationStandard corresponding to protocol
+	}
+	update {
+		for (mStandard : mStandards) {
+			deleteStandard(protocol, mStandard)
+		}
+	}
+}
+
+routine deleteStandard(model::Protocol protocol, model2::CommunicationStandard mStandard) {
+	match {
+		val link = retrieve optional model::Link corresponding to mStandard tagged "standard"
+	}
+	update {
+		if (link.isPresent) {
+			removeCorrespondenceBetween(link.get, mStandard, "standard")
+		}
+		removeCorrespondenceBetween(protocol, mStandard)
+		removeObject(mStandard)
 	}
 }
