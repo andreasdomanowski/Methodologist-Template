@@ -167,15 +167,26 @@ routine updateLinkProtocol(model::Link link, model::Protocol oldProtocol, model:
 	}
 	update {
 		if (mStandard.isPresent) {
-			// rename the Link's own standard rather than moving the new Protocol's one into it, which would drop
-			// that standard out of its container while correspondences still point at it
 			val standard = mStandard.get
-			if (oldProtocol !== null) {
-				removeCorrespondenceBetween(oldProtocol, standard)
+			if (newProtocol === null) {
+				// the Link's protocol was unset: its standard has nothing to stand for anymore. Drop it along with
+				// its correspondences (deleteStandard also removes the tagged one to the Link).
+				if (oldProtocol !== null) {
+					deleteStandard(oldProtocol, standard)
+				} else {
+					removeCorrespondenceBetween(link, standard, "standard")
+					removeObject(standard)
+				}
+			} else {
+				// rename the Link's own standard rather than moving the new Protocol's one into it, which would drop
+				// that standard out of its container while correspondences still point at it
+				if (oldProtocol !== null) {
+					removeCorrespondenceBetween(oldProtocol, standard)
+				}
+				standard.name = newProtocol.name
+				addCorrespondenceBetween(newProtocol, standard)
 			}
-			standard.name = newProtocol.name
-			addCorrespondenceBetween(newProtocol, standard)
-		} else {
+		} else if (newProtocol !== null) {
 			createStandardForLink(link, newProtocol)
 		}
 	}
