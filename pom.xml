@@ -14,7 +14,7 @@
 
   <!-- Project Information -->
   <artifactId>tools.vitruv.methodologisttemplate</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0-ID-CC-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Methodologist Template</name>
@@ -29,7 +29,7 @@
   </modules>
 
   <properties>
-    <vitruv.version>4.0.1</vitruv.version>
+    <vitruv.version>4.0.2</vitruv.version>
   </properties>
 
   <dependencyManagement>
