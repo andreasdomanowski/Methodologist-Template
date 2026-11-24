@@ -1,6 +1,7 @@
 
 import java.io.File;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import tools.vitruv.methodologisttemplate.model.model2.Root;
 
 import "http://vitruv.tools/methodologisttemplate/model" as model
 import "http://vitruv.tools/methodologisttemplate/model2" as model2
@@ -88,6 +89,16 @@ routine deleteEntity(model::Component component) {
 		val entity = retrieve model2::Entity corresponding to component
 	}
 	update {
+    // Link[entities] is a non-containment reference, so removing the entity from its container leaves every model2
+    // Link still pointing at it. Such a reference is serialized as a bare id that no longer resolves, which makes the
+    // next load of the model fail. ComponentRemovedFromLink only covers Links with a counterpart in model, but a Link
+    // may also have been created or extended in model2 itself, so drop the entity from all Links of its Root.
+		val entityContainer = entity.eContainer
+		if (entityContainer instanceof Root) {
+			for (mLink : entityContainer.links) {
+				mLink.entities.remove(entity)
+			}
+		}
     // remove the corresponding object as well
 		removeObject(entity)
     // cleanup of the correspondence model so it does not contain links to invalid, i.e., deleted, model elements
